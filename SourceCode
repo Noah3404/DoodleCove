@@ -1,0 +1,88 @@
+//
+//  MainView.swift
+//  DoodleCove
+//
+//  Created by Noah Epstein on 12/10/24.
+//
+
+import SwiftUI
+
+struct MainView: View {
+    @State private var today = Date()
+    @State private var loggedDays: [Date] = []
+    @State private var drawingData: [String: Data] = [:] // Store drawings with date keys
+    @State private var showDoodleView = false
+    
+    var body: some View {
+        NavigationView {
+            VStack {
+                // Title and Date
+                VStack {
+                    Text("DoodleCove")
+                        .font(.largeTitle)
+                        .fontWeight(.bold)
+                        .padding(.top)
+                    
+                    Text(today, style: .date)
+                        .font(.title3)
+                        .foregroundColor(.gray)
+                }
+                .padding()
+                
+                // List of Previous Doodles
+                List {
+                    Section(header: Text("Your Doodles")) {
+                        ForEach(loggedDays, id: \.self) { date in
+                            let dateString = formatDate(date)
+                            NavigationLink(destination: DoodleView(dateKey: dateString, drawingData: $drawingData)) {
+                                Text(dateString)
+                            }
+                        }
+                    }
+                    
+                    // Option to log today's doodle
+                    Section {
+                        Button(action: {
+                            _ = formatDate(today)
+                            if !loggedDays.contains(today) {
+                                loggedDays.append(today)
+                            }
+                            showDoodleView = true
+                        }) {
+                            Text("Log Today’s Doodle")
+                                .fontWeight(.bold)
+                        }
+                    }
+                }
+                .listStyle(InsetGroupedListStyle())
+                .navigationTitle("")
+                .toolbar {
+                    EditButton()
+                }
+            }
+            .onAppear {
+                loadLoggedDays()
+            }
+            .sheet(isPresented: $showDoodleView) {
+                DoodleView(dateKey: formatDate(today), drawingData: $drawingData)
+            }
+        }
+    }
+    
+    func formatDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        return formatter.string(from: date)
+    }
+    
+    func loadLoggedDays() {
+        // Load previously saved dates and drawings
+        if let savedData = UserDefaults.standard.data(forKey: "loggedDays"),
+           let decodedDays = try? JSONDecoder().decode([Date].self, from: savedData) {
+            loggedDays = decodedDays
+        }
+        if let savedDrawings = UserDefaults.standard.dictionary(forKey: "drawingData") as? [String: Data] {
+            drawingData = savedDrawings
+        }
+    }
+}
